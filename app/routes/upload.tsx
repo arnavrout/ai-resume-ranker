@@ -135,6 +135,7 @@ import Navbar from '~/components/Navbar';
 import { usePuterStore } from '~/lib/puter';
 import { generateUUID } from '~/lib/utils';
 import { prepareInstructions } from '../../constants';
+import { convertPdfToImage } from '~/lib/pdf2img';
 
 const Upload = () => {
   const { fs, ai } = usePuterStore();
@@ -170,6 +171,30 @@ const Upload = () => {
         return;
       }
 
+      setStatusText('Converting PDF to image...');
+
+const imageResult = await convertPdfToImage(file);
+
+console.log('PDF CONVERSION RESULT:', imageResult);
+
+if (!imageResult.file) {
+  setStatusText(
+    imageResult.error || 'Failed to convert PDF to image.'
+  );
+  setIsProcessing(false);
+  return;
+}
+
+setStatusText('Uploading image...');
+
+const uploadedImage = await fs.upload([imageResult.file]);
+
+if (!uploadedImage) {
+  setStatusText('Failed to upload image.');
+  setIsProcessing(false);
+  return;
+}
+
       setStatusText('Preparing data...');
 
       const uuid = generateUUID();
@@ -180,7 +205,7 @@ const Upload = () => {
         jobTitle,
         jobDescription,
         resumePath: uploadedFile.path,
-        imagePath: '',
+        imagePath: uploadedImage.path,
         feedback: '',
         };
 
@@ -214,6 +239,7 @@ const Upload = () => {
 
       console.log('===== FINAL DATA =====');
       console.log(data);
+      navigate(`/resume/${uuid}`);
 
       setStatusText('Analysis complete, redirecting...');
 
